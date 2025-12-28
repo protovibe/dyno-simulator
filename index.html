@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Dyno Simulator</title>
+    <style>
+        /* ==========================================
+           GLOBAL STYLES
+           ========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 50%, #7fcdbb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            transition: background 2s ease;
+        }
+
+        body.night-mode {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+
+        .container {
+            text-align: center;
+            padding: 10px;
+            max-width: 850px;
+            width: 100%;
+        }
+
+        /* ==========================================
+           CREATION SCREEN STYLES
+           ========================================== */
+        #creation-screen {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #2d5a27;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #88d8b0;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+        }
+
+        .option-group {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .option-group h3 {
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .color-options {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .color-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-btn:hover { transform: scale(1.15); }
+        .color-btn.selected { border-color: #333; transform: scale(1.1); }
+
+        .type-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .type-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 20px;
+            background: #e9ecef;
+            color: #333;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .type-btn:hover { background: #dee2e6; }
+        .type-btn.selected {
+            background: #4ecdc4;
+            color: white;
+            box-shadow: 0 4px 12px rgba(78, 205, 196, 0.4);
+        }
+
+        #preview-canvas {
+            border-radius: 15px;
+            background: linear-gradient(180deg, #87ceeb 0%, #98d8c8 100%);
+            margin: 20px auto;
+            display: block;
+        }
+
+        .start-btn {
+            padding: 18px 50px;
+            font-size: 1.4em;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            box-shadow: 0 6px 20px rgba(238, 90, 90, 0.4);
+            margin-top: 15px;
+        }
+
+        .start-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(238, 90, 90, 0.5); }
+        .start-btn:active { transform: translateY(0); }
+
+        /* ==========================================
+           SIMULATION SCREEN STYLES
+           ========================================== */
+        #simulation-screen { display: none; }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .status-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .status-bar {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 10px;
+            min-width: 90px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-bar label {
+            display: block;
+            font-size: 0.7em;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .bar-outer {
+            height: 14px;
+            background: #e9ecef;
+            border-radius: 7px;
+            overflow: hidden;
+        }
+
+        .bar-inner {
+            height: 100%;
+            border-radius: 7px;
+            transition: width 0.3s ease;
+        }
+
+        .bar-inner.hunger { background: linear-gradient(90deg, #ff9a56, #ff6b35); }
+        .bar-inner.thirst { background: linear-gradient(90deg, #74b9ff, #0984e3); }
+        .bar-inner.energy { background: linear-gradient(90deg, #a8e6cf, #55a630); }
+        .bar-inner.happiness { background: linear-gradient(90deg, #fd79a8, #e84393); }
+
+        .stats-panel {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-box .stat-label {
+            font-size: 0.65em;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-box .stat-value {
+            font-size: 1em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .warning-message {
+            background: #fff3cd;
+            color: #856404;
+            padding: 6px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.85em;
+            display: none;
+        }
+
+        .warning-message.danger { background: #f8d7da; color: #721c24; }
+
+        #game-canvas {
+            border-radius: 15px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            touch-action: none;
+        }
+
+        /* Music Player */
+        .music-player {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .music-player .track-info {
+            flex: 1;
+            text-align: left;
+            min-width: 120px;
+        }
+
+        .music-player .track-name {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .music-player .track-artist {
+            font-size: 0.7em;
+            color: #666;
+        }
+
+        .music-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .music-btn:hover { transform: scale(1.1); }
+        .music-btn:active { transform: scale(0.95); }
+        .music-btn.playing { background: linear-gradient(135deg, #55a630, #2d6a4f); }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .mobile-controls {
+            display: none;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .move-btn, .action-game-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .move-btn:active, .action-game-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .roar-btn {
+            padding: 10px 16px;
+            border-radius: 18px;
+            border: none;
+            font-size: 0.9em;
+            cursor: pointer;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+            font-family: inherit;
+            box-shadow: 0 4px 12px rgba(238, 90, 90, 0.4);
+        }
+
+        .jump-btn {
+            background: linear-gradient(135deg, #74b9ff, #0984e3) !important;
+            color: white !important;
+        }
+
+        .toy-btn {
+            background: linear-gradient(135deg, #fdcb6e, #f39c12) !important;
+            color: white !important;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 18px;
+            border: none;
+            font-size: 0.85em;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover { transform: translateY(-2px); }
+        .action-btn:active { transform: translateY(0); }
+        .action-btn.change-dyno { background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: white; }
+        .action-btn.restart { background: linear-gradient(135deg, #4ecdc4, #44a08d); color: white; display: none; }
+        .action-btn.toggle-sound { background: linear-gradient(135deg, #fdcb6e, #f39c12); color: white; }
+        .action-btn.toggle-sound.muted { background: linear-gradient(135deg, #b2bec3, #636e72); }
+
+        .time-indicator {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 12px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-indicator .sun-moon { font-size: 1.1em; }
+        .time-indicator .cycle-bar {
+            width: 50px;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .time-indicator .cycle-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffeaa7, #fdcb6e);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .time-indicator.night .cycle-progress {
+            background: linear-gradient(90deg, #a29bfe, #6c5ce7);
+        }
+
+        /* Toy selector */
+        .toy-selector {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 8px;
+            display: none;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .toy-selector.visible { display: flex; }
+
+        .toy-option {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            border: 3px solid transparent;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 1.5em;
+        }
+
+        .toy-option:hover { transform: scale(1.1); background: #e9ecef; }
+        .toy-option.selected { border-color: #6c5ce7; background: #e9ecef; }
+        .toy-option span { font-size: 0.4em; margin-top: 2px; }
+
+        @media (hover: none) and (pointer: coarse) {
+            .mobile-controls { display: flex; }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8em; }
+            .container { padding: 8px; }
+            #creation-screen { padding: 15px 10px; }
+            .top-bar { flex-direction: column; align-items: center; }
+            .status-container, .stats-panel { justify-content: center; }
+            .mobile-controls { display: flex; }
+            .controls-row { justify-content: center; }
+            .music-player { flex-wrap: wrap; justify-content: center; }
+        }
+
+        .keyboard-hints {
+            margin-top: 8px;
+            font-size: 0.7em;
+            color: #666;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .keyboard-hints span { margin: 0 6px; }
+        .keyboard-hints kbd {
+            background: #e9ecef;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- CREATION SCREEN -->
+        <div id="creation-screen">
+            <h1>Dyno Simulator</h1>
+            <p class="subtitle">Create your own dinosaur friend!</p>
+
+            <div class="option-group">
+                <h3>Choose Body Color</h3>
+                <div class="color-options">
+                    <button class="color-btn selected" data-color="#4ecdc4" style="background: #4ecdc4;"></button>
+                    <button class="color-btn" data-color="#ff6b6b" style="background: #ff6b6b;"></button>
+                    <button class="color-btn" data-color="#95e1d3" style="background: #95e1d3;"></button>
+                    <button class="color-btn" data-color="#f9d56e" style="background: #f9d56e;"></button>
+                    <button class="color-btn" data-color="#b983ff" style="background: #b983ff;"></button>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <h3>Choose Size</h3>
+                <div class="type-options">
+                    <button class="type-btn" data-type="tiny">Tiny</button>
+                    <button class="type-btn selected" data-type="normal">Normal</button>
+                    <button class="type-btn" data-type="big">Big</button>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <h3>Preview</h3>
+                <canvas id="preview-canvas" width="300" height="200"></canvas>
+            </div>
+
+            <button class="start-btn" id="start-btn">Start Simulation!</button>
+        </div>
+
+        <!-- SIMULATION SCREEN -->
+        <div id="simulation-screen">
+            <div class="top-bar">
+                <div class="status-container">
+                    <div class="status-bar">
+                        <label>Hunger</label>
+                        <div class="bar-outer"><div class="bar-inner hunger" id="hunger-bar" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="status-bar">
+                        <label>Thirst</label>
+                        <div class="bar-outer"><div class="bar-inner thirst" id="thirst-bar" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="status-bar">
+                        <label>Energy</label>
+                        <div class="bar-outer"><div class="bar-inner energy" id="energy-bar" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="status-bar">
+                        <label>Happiness</label>
+                        <div class="bar-outer"><div class="bar-inner happiness" id="happiness-bar" style="width: 100%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <div class="stat-box">
+                        <div class="stat-label">Time</div>
+                        <div class="stat-value" id="time-counter">00:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Food</div>
+                        <div class="stat-value" id="food-counter">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Toys</div>
+                        <div class="stat-value" id="toy-counter">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Jumps</div>
+                        <div class="stat-value" id="jump-counter">0</div>
+                    </div>
+                    <div class="time-indicator" id="time-indicator">
+                        <span class="sun-moon" id="sun-moon-icon">☀️</span>
+                        <div class="cycle-bar">
+                            <div class="cycle-progress" id="cycle-progress" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="warning-message" id="warning-message"></div>
+
+            <canvas id="game-canvas"></canvas>
+
+            <!-- Music Player -->
+            <div class="music-player">
+                <button class="music-btn" id="music-prev-btn">⏮</button>
+                <button class="music-btn" id="music-play-btn">▶</button>
+                <button class="music-btn" id="music-next-btn">⏭</button>
+                <div class="track-info">
+                    <div class="track-name" id="track-name">Dino Dance</div>
+                    <div class="track-artist" id="track-artist">Prehistoric Beats</div>
+                </div>
+            </div>
+
+            <!-- Toy Selector -->
+            <div class="toy-selector" id="toy-selector">
+                <div class="toy-option" data-toy="ball">🏀<span>Ball</span></div>
+                <div class="toy-option" data-toy="bone">🦴<span>Bone</span></div>
+                <div class="toy-option" data-toy="frisbee">🥏<span>Frisbee</span></div>
+                <div class="toy-option" data-toy="stick">🪵<span>Stick</span></div>
+            </div>
+
+            <div class="controls-row">
+                <div class="mobile-controls">
+                    <button class="move-btn" id="left-btn">◀</button>
+                    <button class="action-game-btn jump-btn" id="jump-btn">⬆</button>
+                    <button class="roar-btn" id="roar-btn">🔊</button>
+                    <button class="action-game-btn toy-btn" id="toy-btn">🎾</button>
+                    <button class="move-btn" id="right-btn">▶</button>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn toggle-sound" id="toggle-sound-btn">🔊 Sound</button>
+                    <button class="action-btn change-dyno" id="change-dyno-btn">🦕 Change</button>
+                    <button class="action-btn restart" id="restart-btn">🔄 Restart</button>
+                </div>
+            </div>
+
+            <div class="keyboard-hints">
+                <span><kbd>←→</kbd> Move</span>
+                <span><kbd>↑</kbd>/<kbd>W</kbd> Jump</span>
+                <span><kbd>Space</kbd> Roar</span>
+                <span><kbd>T</kbd> Toy</span>
+                <span><kbd>M</kbd> Mute</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================
+           GAME CONFIGURATION
+           ========================================== */
+        const CONFIG = {
+            sizeMultipliers: { tiny: 0.6, normal: 1.0, big: 1.4 },
+            baseDyno: { bodyWidth: 60, bodyHeight: 40, headSize: 25, legHeight: 20, tailLength: 35 },
+            game: {
+                groundHeight: 80,
+                moveSpeed: 5,
+                jumpForce: 15,
+                gravity: 0.6,
+                statusDecreaseRate: 0.012,
+                statusIncreaseAmount: 30,
+                itemRespawnTime: 3000,
+                roarDuration: 1200,
+                dayNightCycleDuration: 60000,
+                starsCount: 50
+            }
+        };
+
+        /* ==========================================
+           GAME STATE
+           ========================================== */
+        const gameState = {
+            dyno: {
+                color: '#4ecdc4',
+                type: 'normal',
+                x: 0, y: 0,
+                vx: 0, vy: 0,
+                direction: 1,
+                isMoving: false,
+                isJumping: false,
+                isRoaring: false,
+                roarTimer: 0,
+                walkFrame: 0
+            },
+            status: { hunger: 100, thirst: 100, energy: 100, happiness: 100 },
+            counters: { food: 0, water: 0, roars: 0, jumps: 0, toyPlays: 0, startTime: 0, elapsedTime: 0 },
+            dayNight: { time: 0, isNight: false, stars: [] },
+            items: [],
+            toys: [],
+            activeToy: null,
+            particles: [],
+            isExhausted: false,
+            soundEnabled: true,
+            musicPlaying: false,
+            keys: { left: false, right: false, jump: false },
+            canvas: { width: 0, height: 0 },
+            groundY: 0
+        };
+
+        // Music tracks
+        const musicTracks = [
+            { name: 'Dino Dance', artist: 'Prehistoric Beats', tempo: 120, key: 'C' },
+            { name: 'Jurassic Joy', artist: 'Cretaceous Crew', tempo: 100, key: 'G' },
+            { name: 'Rex Relaxation', artist: 'Mesozoic Melodies', tempo: 80, key: 'F' },
+            { name: 'Stomping Around', artist: 'Triassic Tunes', tempo: 140, key: 'D' },
+            { name: 'Peaceful Plains', artist: 'Dino Dreams', tempo: 70, key: 'Am' }
+        ];
+        let currentTrackIndex = 0;
+
+        // Toy types
+        const toyTypes = {
+            ball: { emoji: '🏀', color: '#ff6b35', radius: 15, bouncy: 0.8, happiness: 5 },
+            bone: { emoji: '🦴', color: '#f5deb3', radius: 12, bouncy: 0.3, happiness: 8 },
+            frisbee: { emoji: '🥏', color: '#00bcd4', radius: 18, bouncy: 0.5, happiness: 6 },
+            stick: { emoji: '🪵', color: '#8b4513', radius: 10, bouncy: 0.2, happiness: 4 }
+        };
+
+        /* ==========================================
+           DOM ELEMENTS
+           ========================================== */
+        const elements = {
+            creationScreen: document.getElementById('creation-screen'),
+            simulationScreen: document.getElementById('simulation-screen'),
+            previewCanvas: document.getElementById('preview-canvas'),
+            gameCanvas: document.getElementById('game-canvas'),
+            startBtn: document.getElementById('start-btn'),
+            restartBtn: document.getElementById('restart-btn'),
+            changeDynoBtn: document.getElementById('change-dyno-btn'),
+            toggleSoundBtn: document.getElementById('toggle-sound-btn'),
+            hungerBar: document.getElementById('hunger-bar'),
+            thirstBar: document.getElementById('thirst-bar'),
+            energyBar: document.getElementById('energy-bar'),
+            happinessBar: document.getElementById('happiness-bar'),
+            warningMessage: document.getElementById('warning-message'),
+            leftBtn: document.getElementById('left-btn'),
+            rightBtn: document.getElementById('right-btn'),
+            jumpBtn: document.getElementById('jump-btn'),
+            roarBtn: document.getElementById('roar-btn'),
+            toyBtn: document.getElementById('toy-btn'),
+            colorBtns: document.querySelectorAll('.color-btn'),
+            typeBtns: document.querySelectorAll('.type-btn'),
+            timeCounter: document.getElementById('time-counter'),
+            foodCounter: document.getElementById('food-counter'),
+            toyCounter: document.getElementById('toy-counter'),
+            jumpCounter: document.getElementById('jump-counter'),
+            timeIndicator: document.getElementById('time-indicator'),
+            sunMoonIcon: document.getElementById('sun-moon-icon'),
+            cycleProgress: document.getElementById('cycle-progress'),
+            musicPlayBtn: document.getElementById('music-play-btn'),
+            musicPrevBtn: document.getElementById('music-prev-btn'),
+            musicNextBtn: document.getElementById('music-next-btn'),
+            trackName: document.getElementById('track-name'),
+            trackArtist: document.getElementById('track-artist'),
+            toySelector: document.getElementById('toy-selector'),
+            toyOptions: document.querySelectorAll('.toy-option')
+        };
+
+        /* ==========================================
+           AUDIO SYSTEM
+           ========================================== */
+        let audioContext = null;
+        let musicOscillators = [];
+        let musicGain = null;
+        let musicInterval = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        // Note frequencies
+        const noteFreqs = {
+            'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'B3': 246.94,
+            'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
+            'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99
+        };
+
+        // Music patterns for different tracks
+        const musicPatterns = {
+            'C': ['C4', 'E4', 'G4', 'C5', 'G4', 'E4', 'C4', 'G3'],
+            'G': ['G3', 'B3', 'D4', 'G4', 'D4', 'B3', 'G3', 'D3'],
+            'F': ['F3', 'A3', 'C4', 'F4', 'C4', 'A3', 'F3', 'C3'],
+            'D': ['D4', 'F4', 'A4', 'D5', 'A4', 'F4', 'D4', 'A3'],
+            'Am': ['A3', 'C4', 'E4', 'A4', 'E4', 'C4', 'A3', 'E3']
+        };
+
+        function playMusic() {
+            if (!gameState.soundEnabled) return;
+            stopMusic();
+
+            const ctx = initAudio();
+            const track = musicTracks[currentTrackIndex];
+            const pattern = musicPatterns[track.key];
+            const beatDuration = 60 / track.tempo;
+
+            musicGain = ctx.createGain();
+            musicGain.connect(ctx.destination);
+            musicGain.gain.setValueAtTime(0.15, ctx.currentTime);
+
+            let noteIndex = 0;
+
+            function playNote() {
+                if (!gameState.musicPlaying) return;
+
+                const note = pattern[noteIndex % pattern.length];
+                const freq = noteFreqs[note];
+
+                const osc = ctx.createOscillator();
+                const noteGain = ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+                noteGain.gain.setValueAtTime(0.3, ctx.currentTime);
+                noteGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + beatDuration * 0.8);
+
+                osc.connect(noteGain);
+                noteGain.connect(musicGain);
+
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + beatDuration);
+
+                // Bass note
+                const bassOsc = ctx.createOscillator();
+                const bassGain = ctx.createGain();
+                bassOsc.type = 'sine';
+                bassOsc.frequency.setValueAtTime(freq / 2, ctx.currentTime);
+                bassGain.gain.setValueAtTime(0.2, ctx.currentTime);
+                bassGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + beatDuration);
+                bassOsc.connect(bassGain);
+                bassGain.connect(musicGain);
+                bassOsc.start(ctx.currentTime);
+                bassOsc.stop(ctx.currentTime + beatDuration);
+
+                noteIndex++;
+            }
+
+            playNote();
+            musicInterval = setInterval(playNote, beatDuration * 1000);
+            gameState.musicPlaying = true;
+            elements.musicPlayBtn.textContent = '⏸';
+            elements.musicPlayBtn.classList.add('playing');
+        }
+
+        function stopMusic() {
+            if (musicInterval) {
+                clearInterval(musicInterval);
+                musicInterval = null;
+            }
+            gameState.musicPlaying = false;
+            elements.musicPlayBtn.textContent = '▶';
+            elements.musicPlayBtn.classList.remove('playing');
+        }
+
+        function nextTrack() {
+            currentTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
+            updateTrackDisplay();
+            if (gameState.musicPlaying) playMusic();
+        }
+
+        function prevTrack() {
+            currentTrackIndex = (currentTrackIndex - 1 + musicTracks.length) % musicTracks.length;
+            updateTrackDisplay();
+            if (gameState.musicPlaying) playMusic();
+        }
+
+        function updateTrackDisplay() {
+            const track = musicTracks[currentTrackIndex];
+            elements.trackName.textContent = track.name;
+            elements.trackArtist.textContent = track.artist;
+        }
+
+        function playRoarSound() {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                const duration = 1.2;
+
+                const masterGain = ctx.createGain();
+                masterGain.connect(ctx.destination);
+                masterGain.gain.setValueAtTime(0.4, now);
+                masterGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+                const lowOsc = ctx.createOscillator();
+                const lowGain = ctx.createGain();
+                lowOsc.type = 'sawtooth';
+                lowOsc.frequency.setValueAtTime(80, now);
+                lowOsc.frequency.exponentialRampToValueAtTime(30, now + duration);
+                lowGain.gain.setValueAtTime(0.5, now);
+                lowGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+                lowOsc.connect(lowGain);
+                lowGain.connect(masterGain);
+                lowOsc.start(now);
+                lowOsc.stop(now + duration);
+
+                const midOsc = ctx.createOscillator();
+                const midGain = ctx.createGain();
+                midOsc.type = 'sawtooth';
+                midOsc.frequency.setValueAtTime(150, now);
+                midOsc.frequency.exponentialRampToValueAtTime(60, now + duration);
+                midGain.gain.setValueAtTime(0.3, now);
+                midGain.gain.exponentialRampToValueAtTime(0.01, now + duration * 0.8);
+                midOsc.connect(midGain);
+                midGain.connect(masterGain);
+                midOsc.start(now);
+                midOsc.stop(now + duration);
+
+                const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+                const noiseData = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < noiseData.length; i++) noiseData[i] = (Math.random() * 2 - 1) * 0.5;
+                const noiseSource = ctx.createBufferSource();
+                noiseSource.buffer = noiseBuffer;
+                const noiseFilter = ctx.createBiquadFilter();
+                noiseFilter.type = 'lowpass';
+                noiseFilter.frequency.setValueAtTime(500, now);
+                noiseFilter.frequency.exponentialRampToValueAtTime(100, now + duration);
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.1, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + duration * 0.7);
+                noiseSource.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(masterGain);
+                noiseSource.start(now);
+                noiseSource.stop(now + duration);
+            } catch (e) { console.log('Audio error:', e); }
+        }
+
+        function playJumpSound() {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } catch (e) {}
+        }
+
+        function playLandSound() {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } catch (e) {}
+        }
+
+        function playToySound(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                const freqs = { ball: 300, bone: 200, frisbee: 400, stick: 150 };
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freqs[type] || 250, now);
+                osc.frequency.exponentialRampToValueAtTime((freqs[type] || 250) * 1.5, now + 0.1);
+                osc.frequency.exponentialRampToValueAtTime(freqs[type] || 250, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } catch (e) {}
+        }
+
+        function playBounceSound() {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } catch (e) {}
+        }
+
+        function playEatSound() {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                for (let i = 0; i < 3; i++) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(100 + Math.random() * 50, now + i * 0.08);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + i * 0.08 + 0.05);
+                    gain.gain.setValueAtTime(0.15, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.08);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.1);
+                }
+            } catch (e) {}
+        }
+
+        function playDrinkSound() {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+                for (let i = 0; i < 2; i++) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(200, now + i * 0.15);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + i * 0.15 + 0.1);
+                    gain.gain.setValueAtTime(0.2, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.15);
+                }
+            } catch (e) {}
+        }
+
+        /* ==========================================
+           CHARACTER CREATION
+           ========================================== */
+        function initCreationScreen() {
+            elements.colorBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    elements.colorBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    gameState.dyno.color = btn.dataset.color;
+                    drawPreview();
+                });
+            });
+
+            elements.typeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    elements.typeBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    gameState.dyno.type = btn.dataset.type;
+                    drawPreview();
+                });
+            });
+
+            elements.startBtn.addEventListener('click', startSimulation);
+            drawPreview();
+        }
+
+        function drawPreview() {
+            const ctx = elements.previewCanvas.getContext('2d');
+            const canvas = elements.previewCanvas;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#8bc34a';
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+
+            ctx.fillStyle = '#7cb342';
+            for (let i = 0; i < canvas.width; i += 15) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height - 40);
+                ctx.lineTo(i + 5, canvas.height - 50);
+                ctx.lineTo(i + 10, canvas.height - 40);
+                ctx.fill();
+            }
+
+            drawDinosaur(ctx, canvas.width / 2, canvas.height - 40, gameState.dyno.color, gameState.dyno.type, 1, false, 0);
+        }
+
+        /* ==========================================
+           DINOSAUR DRAWING
+           ========================================== */
+        function drawDinosaur(ctx, x, y, color, type, direction, isRoaring, walkFrame) {
+            const scale = CONFIG.sizeMultipliers[type];
+            const base = CONFIG.baseDyno;
+            const bodyW = base.bodyWidth * scale;
+            const bodyH = base.bodyHeight * scale;
+            const headSize = base.headSize * scale;
+            const legH = base.legHeight * scale;
+            const tailLen = base.tailLength * scale;
+
+            const walkOffset = Math.sin(walkFrame * 0.3) * 3 * scale;
+            const legOffset = Math.sin(walkFrame * 0.3) * 5;
+
+            ctx.save();
+            ctx.translate(x, y + walkOffset);
+            ctx.scale(direction, 1);
+
+            const darkerColor = shadeColor(color, -20);
+            const lighterColor = shadeColor(color, 20);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.beginPath();
+            ctx.ellipse(0, 2, bodyW * 0.6, 8 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tail
+            const tailWag = Math.sin(walkFrame * 0.2) * 5;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(-bodyW/2, -legH - bodyH/2);
+            ctx.quadraticCurveTo(-bodyW/2 - tailLen, -legH - bodyH/2 - 10 + tailWag, -bodyW/2 - tailLen, -legH - bodyH/2 + 10 + tailWag);
+            ctx.quadraticCurveTo(-bodyW/2 - tailLen/2, -legH - bodyH/2 + 15, -bodyW/2, -legH - bodyH/2 + 5);
+            ctx.fill();
+
+            // Legs
+            ctx.fillStyle = darkerColor;
+            ctx.save();
+            ctx.translate(-bodyW/4 - 2*scale, -legH);
+            ctx.rotate(Math.sin(walkFrame * 0.3) * 0.2);
+            ctx.fillRect(-6*scale, 0, 12*scale, legH + legOffset);
+            ctx.restore();
+            ctx.save();
+            ctx.translate(bodyW/4 + 2*scale, -legH);
+            ctx.rotate(Math.sin(walkFrame * 0.3 + Math.PI) * 0.2);
+            ctx.fillRect(-6*scale, 0, 12*scale, legH - legOffset);
+            ctx.restore();
+
+            // Feet
+            ctx.fillStyle = darkerColor;
+            ctx.beginPath();
+            ctx.ellipse(-bodyW/4 - 2*scale, 0, 10*scale, 5*scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(bodyW/4 + 2*scale, 0, 10*scale, 5*scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Body
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(0, -legH - bodyH/2, bodyW/2, bodyH/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Belly
+            ctx.fillStyle = lighterColor;
+            ctx.beginPath();
+            ctx.ellipse(5*scale, -legH - bodyH/2 + 5*scale, bodyW/3, bodyH/3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Neck
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(bodyW/3, -legH - bodyH);
+            ctx.quadraticCurveTo(bodyW/2 + 5*scale, -legH - bodyH - 15*scale, bodyW/2 + headSize/2, -legH - bodyH - 20*scale);
+            ctx.lineTo(bodyW/2 + headSize/2 - 10*scale, -legH - bodyH - 10*scale);
+            ctx.quadraticCurveTo(bodyW/3 + 5*scale, -legH - bodyH + 5*scale, bodyW/3 - 5*scale, -legH - bodyH + 5*scale);
+            ctx.fill();
+
+            // Head
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(bodyW/2 + headSize/2, -legH - bodyH - headSize, headSize, headSize * 0.7, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Snout
+            ctx.beginPath();
+            ctx.ellipse(bodyW/2 + headSize + 5*scale, -legH - bodyH - headSize + 5*scale, headSize * 0.5, headSize * 0.35, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(bodyW/2 + headSize/2 + 5*scale, -legH - bodyH - headSize - 3*scale, 6*scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(bodyW/2 + headSize/2 + 7*scale, -legH - bodyH - headSize - 3*scale, 3*scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(bodyW/2 + headSize/2 + 8*scale, -legH - bodyH - headSize - 5*scale, 1.5*scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nostril
+            ctx.fillStyle = darkerColor;
+            ctx.beginPath();
+            ctx.arc(bodyW/2 + headSize + 12*scale, -legH - bodyH - headSize + 3*scale, 2*scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Spikes
+            ctx.fillStyle = darkerColor;
+            for (let i = 0; i < 4; i++) {
+                const spikeX = -bodyW/4 + i * (bodyW/4);
+                const spikeY = -legH - bodyH - 5*scale + Math.abs(i - 1.5) * 3*scale;
+                ctx.beginPath();
+                ctx.moveTo(spikeX - 5*scale, spikeY);
+                ctx.lineTo(spikeX, spikeY - 12*scale);
+                ctx.lineTo(spikeX + 5*scale, spikeY);
+                ctx.fill();
+            }
+
+            // Mouth
+            if (isRoaring) {
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath();
+                ctx.ellipse(bodyW/2 + headSize + 8*scale, -legH - bodyH - headSize + 12*scale, 10*scale, 8*scale, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(bodyW/2 + headSize + 2*scale + i*5*scale, -legH - bodyH - headSize + 8*scale);
+                    ctx.lineTo(bodyW/2 + headSize + 4*scale + i*5*scale, -legH - bodyH - headSize + 12*scale);
+                    ctx.lineTo(bodyW/2 + headSize + 6*scale + i*5*scale, -legH - bodyH - headSize + 8*scale);
+                    ctx.fill();
+                }
+            } else {
+                ctx.strokeStyle = darkerColor;
+                ctx.lineWidth = 2 * scale;
+                ctx.beginPath();
+                ctx.arc(bodyW/2 + headSize + 5*scale, -legH - bodyH - headSize + 8*scale, 5*scale, 0.2, Math.PI - 0.2);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Roar effect
+            if (isRoaring) {
+                ctx.save();
+                ctx.font = `bold ${24 * scale}px Comic Sans MS, cursive`;
+                ctx.textAlign = 'center';
+                const roarY = y - legH - bodyH - headSize - 50*scale;
+                const roarScale = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+                ctx.translate(x + direction * 20 * scale, roarY);
+                ctx.scale(roarScale, roarScale);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 4;
+                ctx.strokeText('ROAR!', 0, 0);
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fillText('ROAR!', 0, 0);
+                ctx.restore();
+            }
+        }
+
+        function shadeColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+            const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+            const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+            return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        /* ==========================================
+           SIMULATION
+           ========================================== */
+        function startSimulation() {
+            elements.creationScreen.style.display = 'none';
+            elements.simulationScreen.style.display = 'block';
+
+            setupCanvas();
+            resetGameState();
+            generateStars();
+            spawnItems();
+            setupControls();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setupCanvas() {
+            const canvas = elements.gameCanvas;
+            const maxWidth = Math.min(window.innerWidth - 20, 800);
+            const maxHeight = Math.min(window.innerHeight - 320, 380);
+
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            gameState.canvas.width = maxWidth;
+            gameState.canvas.height = maxHeight;
+            gameState.groundY = canvas.height - CONFIG.game.groundHeight;
+        }
+
+        function resetGameState() {
+            const canvas = elements.gameCanvas;
+
+            gameState.dyno.x = canvas.width / 2;
+            gameState.dyno.y = gameState.groundY;
+            gameState.dyno.vx = 0;
+            gameState.dyno.vy = 0;
+            gameState.dyno.direction = 1;
+            gameState.dyno.isMoving = false;
+            gameState.dyno.isJumping = false;
+            gameState.dyno.isRoaring = false;
+            gameState.dyno.walkFrame = 0;
+
+            gameState.status = { hunger: 100, thirst: 100, energy: 100, happiness: 100 };
+            gameState.counters = { food: 0, water: 0, roars: 0, jumps: 0, toyPlays: 0, startTime: Date.now(), elapsedTime: 0 };
+            gameState.dayNight.time = 0;
+            gameState.dayNight.isNight = false;
+            gameState.isExhausted = false;
+            gameState.items = [];
+            gameState.toys = [];
+            gameState.activeToy = null;
+            gameState.particles = [];
+
+            elements.restartBtn.style.display = 'none';
+            elements.warningMessage.style.display = 'none';
+            document.body.classList.remove('night-mode');
+        }
+
+        function generateStars() {
+            gameState.dayNight.stars = [];
+            for (let i = 0; i < CONFIG.game.starsCount; i++) {
+                gameState.dayNight.stars.push({
+                    x: Math.random() * gameState.canvas.width,
+                    y: Math.random() * (gameState.canvas.height - CONFIG.game.groundHeight - 50),
+                    size: Math.random() * 2 + 1,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function spawnItems() {
+            const groundY = gameState.groundY;
+            gameState.items = [];
+
+            for (let i = 0; i < 3; i++) {
+                gameState.items.push({
+                    type: 'food',
+                    x: 80 + Math.random() * (gameState.canvas.width - 160),
+                    y: groundY,
+                    collected: false
+                });
+                gameState.items.push({
+                    type: 'water',
+                    x: 80 + Math.random() * (gameState.canvas.width - 160),
+                    y: groundY,
+                    collected: false
+                });
+            }
+        }
+
+        function throwToy(toyType) {
+            if (gameState.isExhausted) return;
+
+            const dyno = gameState.dyno;
+            const toyConfig = toyTypes[toyType];
+
+            playToySound(toyType);
+            gameState.counters.toyPlays++;
+
+            gameState.toys.push({
+                type: toyType,
+                x: dyno.x + dyno.direction * 50,
+                y: dyno.y - 40,
+                vx: dyno.direction * (8 + Math.random() * 4),
+                vy: -8 - Math.random() * 4,
+                radius: toyConfig.radius,
+                bouncy: toyConfig.bouncy,
+                color: toyConfig.color,
+                rotation: 0,
+                rotationSpeed: (Math.random() - 0.5) * 0.3,
+                life: 600 // 10 seconds at 60fps
+            });
+
+            gameState.status.happiness = Math.min(100, gameState.status.happiness + toyConfig.happiness);
+        }
+
+        /* ==========================================
+           CONTROLS
+           ========================================== */
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                if (elements.creationScreen.style.display !== 'none') return;
+
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                    gameState.keys.left = true;
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                    gameState.keys.right = true;
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                    triggerJump();
+                    e.preventDefault();
+                }
+                if (e.key === ' ') {
+                    triggerRoar();
+                    e.preventDefault();
+                }
+                if (e.key === 't' || e.key === 'T') {
+                    toggleToySelector();
+                    e.preventDefault();
+                }
+                if (e.key === 'm' || e.key === 'M') {
+                    toggleSound();
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') gameState.keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') gameState.keys.right = false;
+            });
+
+            // Mobile controls
+            const handleTouchStart = (dir) => (e) => { e.preventDefault(); initAudio(); if (!gameState.isExhausted) gameState.keys[dir] = true; };
+            const handleTouchEnd = (dir) => (e) => { e.preventDefault(); gameState.keys[dir] = false; };
+
+            elements.leftBtn.addEventListener('touchstart', handleTouchStart('left'));
+            elements.leftBtn.addEventListener('touchend', handleTouchEnd('left'));
+            elements.leftBtn.addEventListener('mousedown', handleTouchStart('left'));
+            elements.leftBtn.addEventListener('mouseup', handleTouchEnd('left'));
+            elements.leftBtn.addEventListener('mouseleave', handleTouchEnd('left'));
+
+            elements.rightBtn.addEventListener('touchstart', handleTouchStart('right'));
+            elements.rightBtn.addEventListener('touchend', handleTouchEnd('right'));
+            elements.rightBtn.addEventListener('mousedown', handleTouchStart('right'));
+            elements.rightBtn.addEventListener('mouseup', handleTouchEnd('right'));
+            elements.rightBtn.addEventListener('mouseleave', handleTouchEnd('right'));
+
+            elements.jumpBtn.addEventListener('click', () => { initAudio(); triggerJump(); });
+            elements.jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); initAudio(); triggerJump(); });
+
+            elements.roarBtn.addEventListener('click', () => { initAudio(); triggerRoar(); });
+            elements.roarBtn.addEventListener('touchstart', (e) => { e.preventDefault(); initAudio(); triggerRoar(); });
+
+            elements.toyBtn.addEventListener('click', () => { initAudio(); toggleToySelector(); });
+
+            elements.restartBtn.addEventListener('click', () => { resetGameState(); generateStars(); spawnItems(); });
+            elements.changeDynoBtn.addEventListener('click', () => {
+                stopMusic();
+                elements.simulationScreen.style.display = 'none';
+                elements.creationScreen.style.display = 'block';
+                document.body.classList.remove('night-mode');
+            });
+            elements.toggleSoundBtn.addEventListener('click', () => { initAudio(); toggleSound(); });
+
+            // Music controls
+            elements.musicPlayBtn.addEventListener('click', () => {
+                initAudio();
+                if (gameState.musicPlaying) stopMusic();
+                else playMusic();
+            });
+            elements.musicNextBtn.addEventListener('click', () => { initAudio(); nextTrack(); });
+            elements.musicPrevBtn.addEventListener('click', () => { initAudio(); prevTrack(); });
+
+            // Toy selector
+            elements.toyOptions.forEach(opt => {
+                opt.addEventListener('click', () => {
+                    initAudio();
+                    const toyType = opt.dataset.toy;
+                    throwToy(toyType);
+                    elements.toySelector.classList.remove('visible');
+                });
+            });
+        }
+
+        function triggerJump() {
+            if (!gameState.dyno.isJumping && !gameState.isExhausted && gameState.status.energy > 5) {
+                gameState.dyno.isJumping = true;
+                gameState.dyno.vy = -CONFIG.game.jumpForce;
+                gameState.counters.jumps++;
+                gameState.status.energy = Math.max(0, gameState.status.energy - 5);
+                playJumpSound();
+            }
+        }
+
+        function triggerRoar() {
+            if (!gameState.dyno.isRoaring && !gameState.isExhausted) {
+                gameState.dyno.isRoaring = true;
+                gameState.dyno.roarTimer = CONFIG.game.roarDuration;
+                gameState.counters.roars++;
+                playRoarSound();
+            }
+        }
+
+        function toggleToySelector() {
+            elements.toySelector.classList.toggle('visible');
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            elements.toggleSoundBtn.textContent = gameState.soundEnabled ? '🔊 Sound' : '🔇 Muted';
+            elements.toggleSoundBtn.classList.toggle('muted', !gameState.soundEnabled);
+            if (!gameState.soundEnabled && gameState.musicPlaying) stopMusic();
+        }
+
+        /* ==========================================
+           GAME LOOP
+           ========================================== */
+        let lastTime = 0;
+
+        function gameLoop(timestamp) {
+            const deltaTime = Math.min(timestamp - lastTime, 50);
+            lastTime = timestamp;
+
+            update(deltaTime);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(deltaTime) {
+            const dyno = gameState.dyno;
+            const status = gameState.status;
+
+            if (!gameState.isExhausted) {
+                gameState.counters.elapsedTime = Date.now() - gameState.counters.startTime;
+            }
+
+            updateDayNightCycle(deltaTime);
+
+            if (dyno.isRoaring) {
+                dyno.roarTimer -= deltaTime;
+                if (dyno.roarTimer <= 0) dyno.isRoaring = false;
+            }
+
+            updateParticles();
+            updateToys();
+
+            if (gameState.isExhausted) {
+                updateUI();
+                return;
+            }
+
+            // Movement
+            const scale = CONFIG.sizeMultipliers[dyno.type];
+            const speed = CONFIG.game.moveSpeed;
+            const dynoWidth = CONFIG.baseDyno.bodyWidth * scale;
+
+            dyno.isMoving = false;
+
+            if (gameState.keys.left) {
+                dyno.x -= speed;
+                dyno.direction = -1;
+                dyno.isMoving = true;
+            }
+            if (gameState.keys.right) {
+                dyno.x += speed;
+                dyno.direction = 1;
+                dyno.isMoving = true;
+            }
+
+            // Jump physics
+            if (dyno.isJumping) {
+                dyno.vy += CONFIG.game.gravity;
+                dyno.y += dyno.vy;
+
+                if (dyno.y >= gameState.groundY) {
+                    dyno.y = gameState.groundY;
+                    dyno.vy = 0;
+                    dyno.isJumping = false;
+                    playLandSound();
+
+                    // Land particles
+                    for (let i = 0; i < 5; i++) {
+                        gameState.particles.push({
+                            x: dyno.x + (Math.random() - 0.5) * 30,
+                            y: gameState.groundY,
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: -Math.random() * 3,
+                            life: 20,
+                            maxLife: 20,
+                            type: 'dust'
+                        });
+                    }
+                }
+            }
+
+            if (dyno.isMoving && !dyno.isJumping) dyno.walkFrame += 0.5;
+            else if (!dyno.isJumping) dyno.walkFrame = 0;
+
+            dyno.x = Math.max(dynoWidth, Math.min(gameState.canvas.width - dynoWidth, dyno.x));
+
+            // Status decrease
+            const nightMult = gameState.dayNight.isNight ? 0.7 : 1;
+            status.hunger = Math.max(0, status.hunger - CONFIG.game.statusDecreaseRate * nightMult);
+            status.thirst = Math.max(0, status.thirst - CONFIG.game.statusDecreaseRate * nightMult);
+            status.happiness = Math.max(0, status.happiness - CONFIG.game.statusDecreaseRate * 0.5);
+
+            if (dyno.isMoving) status.energy = Math.max(0, status.energy - CONFIG.game.statusDecreaseRate * 1.5);
+            else status.energy = Math.min(100, status.energy + CONFIG.game.statusDecreaseRate * 0.5);
+
+            // Music bonus to happiness
+            if (gameState.musicPlaying) {
+                status.happiness = Math.min(100, status.happiness + CONFIG.game.statusDecreaseRate * 0.3);
+            }
+
+            checkItemCollision();
+            checkToyCollision();
+
+            if (status.hunger <= 0 && status.thirst <= 0) {
+                gameState.isExhausted = true;
+                elements.restartBtn.style.display = 'inline-block';
+                stopMusic();
+            }
+
+            respawnItems();
+            updateUI();
+        }
+
+        function updateDayNightCycle(deltaTime) {
+            const cycle = gameState.dayNight;
+            cycle.time += deltaTime / CONFIG.game.dayNightCycleDuration;
+            if (cycle.time >= 1) cycle.time = 0;
+
+            const wasNight = cycle.isNight;
+            cycle.isNight = cycle.time < 0.25 || cycle.time > 0.75;
+
+            if (cycle.isNight !== wasNight) {
+                document.body.classList.toggle('night-mode', cycle.isNight);
+            }
+
+            elements.sunMoonIcon.textContent = cycle.isNight ? '🌙' : '☀️';
+            elements.timeIndicator.classList.toggle('night', cycle.isNight);
+
+            let progress;
+            if (cycle.isNight) {
+                progress = cycle.time < 0.25 ? (0.25 - cycle.time) / 0.25 : (cycle.time - 0.75) / 0.25;
+            } else {
+                progress = (cycle.time - 0.25) / 0.5;
+            }
+            elements.cycleProgress.style.width = (progress * 100) + '%';
+        }
+
+        function updateParticles() {
+            gameState.particles = gameState.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.type === 'dust') p.vy += 0.1;
+                p.life--;
+                return p.life > 0;
+            });
+        }
+
+        function updateToys() {
+            gameState.toys = gameState.toys.filter(toy => {
+                toy.vy += CONFIG.game.gravity * 0.5;
+                toy.x += toy.vx;
+                toy.y += toy.vy;
+                toy.rotation += toy.rotationSpeed;
+                toy.vx *= 0.99;
+
+                // Bounce off ground
+                if (toy.y >= gameState.groundY - toy.radius) {
+                    toy.y = gameState.groundY - toy.radius;
+                    toy.vy *= -toy.bouncy;
+                    toy.vx *= 0.8;
+                    if (Math.abs(toy.vy) > 1) playBounceSound();
+                }
+
+                // Bounce off walls
+                if (toy.x <= toy.radius || toy.x >= gameState.canvas.width - toy.radius) {
+                    toy.vx *= -0.8;
+                    toy.x = Math.max(toy.radius, Math.min(gameState.canvas.width - toy.radius, toy.x));
+                }
+
+                toy.life--;
+                return toy.life > 0 && Math.abs(toy.vx) > 0.1;
+            });
+        }
+
+        function checkItemCollision() {
+            const dyno = gameState.dyno;
+            const scale = CONFIG.sizeMultipliers[dyno.type];
+            const collisionRadius = CONFIG.baseDyno.bodyWidth * scale * 0.6;
+
+            gameState.items.forEach(item => {
+                if (item.collected) return;
+
+                const dx = dyno.x - item.x;
+                const dy = (dyno.y - 30 * scale) - item.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < collisionRadius + 20) {
+                    item.collected = true;
+                    item.respawnTime = Date.now() + CONFIG.game.itemRespawnTime;
+
+                    if (item.type === 'food') {
+                        gameState.status.hunger = Math.min(100, gameState.status.hunger + CONFIG.game.statusIncreaseAmount);
+                        gameState.status.energy = Math.min(100, gameState.status.energy + 15);
+                        gameState.counters.food++;
+                        playEatSound();
+                    } else {
+                        gameState.status.thirst = Math.min(100, gameState.status.thirst + CONFIG.game.statusIncreaseAmount);
+                        gameState.counters.water++;
+                        playDrinkSound();
+                    }
+
+                    // Particles
+                    for (let i = 0; i < 5; i++) {
+                        gameState.particles.push({
+                            x: item.x,
+                            y: item.y - 15,
+                            vx: (Math.random() - 0.5) * 4,
+                            vy: -2 - Math.random() * 2,
+                            life: 20,
+                            maxLife: 20,
+                            type: item.type
+                        });
+                    }
+
+                    if (gameState.isExhausted && (gameState.status.hunger > 0 || gameState.status.thirst > 0)) {
+                        gameState.isExhausted = false;
+                        elements.restartBtn.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function checkToyCollision() {
+            const dyno = gameState.dyno;
+            const scale = CONFIG.sizeMultipliers[dyno.type];
+            const collisionRadius = CONFIG.baseDyno.bodyWidth * scale * 0.5;
+
+            gameState.toys.forEach(toy => {
+                const dx = dyno.x - toy.x;
+                const dy = (dyno.y - 30 * scale) - toy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < collisionRadius + toy.radius) {
+                    // Kick the toy
+                    toy.vx = dyno.direction * (5 + Math.random() * 3);
+                    toy.vy = -5 - Math.random() * 3;
+                    gameState.status.happiness = Math.min(100, gameState.status.happiness + 2);
+                    playToySound(toy.type);
+                }
+            });
+        }
+
+        function respawnItems() {
+            gameState.items.forEach(item => {
+                if (item.collected && Date.now() > item.respawnTime) {
+                    item.collected = false;
+                    item.x = 80 + Math.random() * (gameState.canvas.width - 160);
+                    item.y = gameState.groundY;
+                }
+            });
+        }
+
+        function updateUI() {
+            const status = gameState.status;
+            const counters = gameState.counters;
+
+            elements.hungerBar.style.width = status.hunger + '%';
+            elements.thirstBar.style.width = status.thirst + '%';
+            elements.energyBar.style.width = status.energy + '%';
+            elements.happinessBar.style.width = status.happiness + '%';
+
+            const minutes = Math.floor(counters.elapsedTime / 60000);
+            const seconds = Math.floor((counters.elapsedTime % 60000) / 1000);
+            elements.timeCounter.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            elements.foodCounter.textContent = counters.food;
+            elements.toyCounter.textContent = counters.toyPlays;
+            elements.jumpCounter.textContent = counters.jumps;
+
+            const warningEl = elements.warningMessage;
+            if (gameState.isExhausted) {
+                warningEl.textContent = 'Dyno is exhausted! Eat or drink!';
+                warningEl.className = 'warning-message danger';
+                warningEl.style.display = 'block';
+            } else if (status.hunger < 20 && status.thirst < 20) {
+                warningEl.textContent = 'Dyno is hungry AND thirsty!';
+                warningEl.className = 'warning-message danger';
+                warningEl.style.display = 'block';
+            } else if (status.hunger < 20) {
+                warningEl.textContent = 'Dyno is hungry!';
+                warningEl.className = 'warning-message';
+                warningEl.style.display = 'block';
+            } else if (status.thirst < 20) {
+                warningEl.textContent = 'Dyno is thirsty!';
+                warningEl.className = 'warning-message';
+                warningEl.style.display = 'block';
+            } else if (status.happiness < 20) {
+                warningEl.textContent = 'Dyno is sad! Play or listen to music!';
+                warningEl.className = 'warning-message';
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        /* ==========================================
+           RENDERING
+           ========================================== */
+        function render() {
+            const ctx = elements.gameCanvas.getContext('2d');
+            const canvas = elements.gameCanvas;
+            const cycle = gameState.dayNight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Sky
+            const skyColors = getSkyColors(cycle.time);
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height - CONFIG.game.groundHeight);
+            skyGradient.addColorStop(0, skyColors.top);
+            skyGradient.addColorStop(0.5, skyColors.middle);
+            skyGradient.addColorStop(1, skyColors.bottom);
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height - CONFIG.game.groundHeight);
+
+            if (cycle.isNight) drawStars(ctx);
+            drawCelestialBody(ctx, canvas, cycle);
+            drawClouds(ctx, canvas, cycle.isNight);
+            drawMountains(ctx, canvas, cycle.isNight);
+            drawGround(ctx, canvas, cycle.isNight);
+            drawItems(ctx);
+            drawToys(ctx);
+            drawParticles(ctx);
+
+            // Dyno
+            const dyno = gameState.dyno;
+            drawDinosaur(ctx, dyno.x, dyno.y, dyno.color, dyno.type, dyno.direction, dyno.isRoaring, dyno.walkFrame);
+
+            // Music visualization
+            if (gameState.musicPlaying) {
+                drawMusicNotes(ctx);
+            }
+
+            // Exhaustion overlay
+            if (gameState.isExhausted) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.font = 'bold 24px Comic Sans MS, cursive';
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.textAlign = 'center';
+                ctx.strokeText('Dyno is exhausted!', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('Dyno is exhausted!', canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        function getSkyColors(time) {
+            const colors = {
+                midnight: { top: '#0a0a20', middle: '#1a1a40', bottom: '#2a2a50' },
+                dawn: { top: '#ff9a56', middle: '#ffcc80', bottom: '#87ceeb' },
+                day: { top: '#87CEEB', middle: '#B0E0E6', bottom: '#98D8C8' },
+                dusk: { top: '#ff6b6b', middle: '#ffa07a', bottom: '#dda0dd' },
+                night: { top: '#0f0f30', middle: '#1a1a50', bottom: '#2d2d60' }
+            };
+
+            if (time < 0.2) return lerpColors(colors.night, colors.dawn, time / 0.2);
+            else if (time < 0.3) return lerpColors(colors.dawn, colors.day, (time - 0.2) / 0.1);
+            else if (time < 0.7) return colors.day;
+            else if (time < 0.8) return lerpColors(colors.day, colors.dusk, (time - 0.7) / 0.1);
+            else if (time < 0.9) return lerpColors(colors.dusk, colors.night, (time - 0.8) / 0.1);
+            else return colors.night;
+        }
+
+        function lerpColors(c1, c2, t) {
+            return { top: lerpColor(c1.top, c2.top, t), middle: lerpColor(c1.middle, c2.middle, t), bottom: lerpColor(c1.bottom, c2.bottom, t) };
+        }
+
+        function lerpColor(color1, color2, t) {
+            const c1 = hexToRgb(color1), c2 = hexToRgb(color2);
+            const r = Math.round(c1.r + (c2.r - c1.r) * t);
+            const g = Math.round(c1.g + (c2.g - c1.g) * t);
+            const b = Math.round(c1.b + (c2.b - c1.b) * t);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 0, g: 0, b: 0 };
+        }
+
+        function drawStars(ctx) {
+            const time = Date.now() * 0.001;
+            gameState.dayNight.stars.forEach(star => {
+                const twinkle = Math.sin(time * 2 + star.twinkle) * 0.5 + 0.5;
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + twinkle * 0.7})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size * twinkle, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawCelestialBody(ctx, canvas, cycle) {
+            const groundY = canvas.height - CONFIG.game.groundHeight;
+            const angle = cycle.time * Math.PI;
+            const centerX = canvas.width / 2;
+            const radiusX = canvas.width * 0.4;
+            const radiusY = groundY * 0.6;
+            const x = centerX - Math.cos(angle) * radiusX;
+            const y = groundY - 30 - Math.sin(angle) * radiusY;
+
+            if (cycle.isNight) {
+                ctx.fillStyle = '#f5f5dc';
+                ctx.beginPath();
+                ctx.arc(x, y, 25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(200, 200, 180, 0.5)';
+                ctx.beginPath(); ctx.arc(x - 8, y - 5, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x + 5, y + 8, 4, 0, Math.PI * 2); ctx.fill();
+            } else {
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, 50);
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 200, 100, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 200, 100, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffd93d';
+                ctx.beginPath();
+                ctx.arc(x, y, 22, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawClouds(ctx, canvas, isNight) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${isNight ? 0.3 : 0.8})`;
+            drawCloud(ctx, canvas.width * 0.15, 60, 1);
+            drawCloud(ctx, canvas.width * 0.55, 90, 0.8);
+            drawCloud(ctx, canvas.width * 0.85, 50, 0.6);
+        }
+
+        function drawCloud(ctx, x, y, scale) {
+            ctx.beginPath();
+            ctx.arc(x, y, 25 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 25 * scale, y - 10 * scale, 20 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 45 * scale, y, 25 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 20 * scale, y + 10 * scale, 20 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawMountains(ctx, canvas, isNight) {
+            const groundY = canvas.height - CONFIG.game.groundHeight;
+            ctx.fillStyle = isNight ? '#2a3a4a' : '#a8d5ba';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(100, groundY - 80);
+            ctx.lineTo(200, groundY);
+            ctx.lineTo(280, groundY - 60);
+            ctx.lineTo(350, groundY);
+            ctx.lineTo(450, groundY - 90);
+            ctx.lineTo(550, groundY);
+            ctx.lineTo(620, groundY - 70);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.fill();
+
+            ctx.fillStyle = isNight ? '#1a2a3a' : '#88c9a1';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(80, groundY - 50);
+            ctx.lineTo(150, groundY);
+            ctx.lineTo(250, groundY - 40);
+            ctx.lineTo(320, groundY);
+            ctx.lineTo(420, groundY - 55);
+            ctx.lineTo(500, groundY);
+            ctx.lineTo(580, groundY - 45);
+            ctx.lineTo(650, groundY);
+            ctx.lineTo(canvas.width, groundY - 30);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.fill();
+        }
+
+        function drawGround(ctx, canvas, isNight) {
+            const groundY = canvas.height - CONFIG.game.groundHeight;
+            const groundGradient = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+            if (isNight) {
+                groundGradient.addColorStop(0, '#2a4a2a');
+                groundGradient.addColorStop(0.3, '#1a3a1a');
+                groundGradient.addColorStop(1, '#0a2a0a');
+            } else {
+                groundGradient.addColorStop(0, '#8bc34a');
+                groundGradient.addColorStop(0.3, '#7cb342');
+                groundGradient.addColorStop(1, '#689f38');
+            }
+            ctx.fillStyle = groundGradient;
+            ctx.fillRect(0, groundY, canvas.width, CONFIG.game.groundHeight);
+
+            ctx.fillStyle = isNight ? '#3a5a3a' : '#9ccc65';
+            for (let i = 0; i < canvas.width; i += 12) {
+                const height = 8 + Math.random() * 8;
+                ctx.beginPath();
+                ctx.moveTo(i, groundY);
+                ctx.lineTo(i + 3, groundY - height);
+                ctx.lineTo(i + 6, groundY);
+                ctx.fill();
+            }
+        }
+
+        function drawItems(ctx) {
+            const isNight = gameState.dayNight.isNight;
+            gameState.items.forEach(item => {
+                if (item.collected) return;
+                if (item.type === 'food') {
+                    ctx.strokeStyle = isNight ? '#4a6a3a' : '#6b8e23';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(item.x, item.y);
+                    ctx.lineTo(item.x, item.y - 25);
+                    ctx.stroke();
+                    ctx.fillStyle = isNight ? '#2a5a2a' : '#32cd32';
+                    ctx.beginPath(); ctx.ellipse(item.x - 8, item.y - 20, 10, 6, -0.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(item.x + 8, item.y - 18, 10, 6, 0.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(item.x, item.y - 28, 8, 12, 0, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    ctx.fillStyle = isNight ? '#2a5a8a' : '#4fc3f7';
+                    ctx.beginPath();
+                    ctx.ellipse(item.x, item.y - 5, 20, 8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = isNight ? '#3a6a9a' : '#29b6f6';
+                    ctx.beginPath();
+                    ctx.moveTo(item.x + 10, item.y - 25);
+                    ctx.quadraticCurveTo(item.x + 18, item.y - 15, item.x + 10, item.y - 10);
+                    ctx.quadraticCurveTo(item.x + 2, item.y - 15, item.x + 10, item.y - 25);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawToys(ctx) {
+            gameState.toys.forEach(toy => {
+                ctx.save();
+                ctx.translate(toy.x, toy.y);
+                ctx.rotate(toy.rotation);
+
+                const config = toyTypes[toy.type];
+                ctx.font = `${toy.radius * 2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(config.emoji, 0, 0);
+
+                ctx.restore();
+            });
+        }
+
+        function drawParticles(ctx) {
+            gameState.particles.forEach(p => {
+                const alpha = p.life / p.maxLife;
+                if (p.type === 'food') ctx.fillStyle = `rgba(50, 205, 50, ${alpha})`;
+                else if (p.type === 'water') ctx.fillStyle = `rgba(79, 195, 247, ${alpha})`;
+                else if (p.type === 'dust') ctx.fillStyle = `rgba(139, 119, 101, ${alpha})`;
+                else ctx.fillStyle = `rgba(255, 107, 107, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4 * alpha, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawMusicNotes(ctx) {
+            const time = Date.now() * 0.003;
+            const dyno = gameState.dyno;
+            const notes = ['♪', '♫', '♬'];
+
+            for (let i = 0; i < 3; i++) {
+                const noteX = dyno.x + Math.sin(time + i * 2) * 40;
+                const noteY = dyno.y - 80 - i * 20 - Math.sin(time * 2 + i) * 10;
+                const alpha = 0.3 + Math.sin(time + i) * 0.2;
+
+                ctx.font = '16px Arial';
+                ctx.fillStyle = `rgba(155, 89, 182, ${alpha})`;
+                ctx.textAlign = 'center';
+                ctx.fillText(notes[i % notes.length], noteX, noteY);
+            }
+        }
+
+        /* ==========================================
+           INIT
+           ========================================== */
+        document.addEventListener('DOMContentLoaded', () => {
+            initCreationScreen();
+            updateTrackDisplay();
+        });
+
+        window.addEventListener('resize', () => {
+            if (elements.simulationScreen.style.display !== 'none') {
+                setupCanvas();
+                generateStars();
+            }
+        });
+
+        document.addEventListener('click', () => initAudio(), { once: true });
+        document.addEventListener('touchstart', () => initAudio(), { once: true });
+    </script>
+</body>
+</html>
