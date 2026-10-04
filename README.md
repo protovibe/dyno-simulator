@@ -1,23 +1,21 @@
 # Dyno Simulator
 
-A browser-based dinosaur pet simulator. Pick a color and size, then explore a day/night world while managing hunger, thirst, energy, and happiness. The game includes food, toys, jumping, roaring, sound effects, and a music player.
+Create a dinosaur friend and look after it in a world that changes from day to night. Explore, play, and keep your dino happy!
 
 ![Dyno Simulator gameplay](screenshot.png)
 
-## Run locally
+## How to play
 
-No dependencies or build step are required. From the repository root, run:
+- Choose your dino's color and size, then select **Start Simulation!**.
+- Move around to find food and water, play with toys, and watch your dino's hunger, thirst, energy, and happiness.
+- Jump, roar, and put on some music. Use **Change** to make a different dino or **Restart** for a fresh start.
+
+**Controls:** **← / →** move · **↑ / W** jump · **Space** roar · **T** toys · **M** mute. On-screen controls are available for touchscreens.
+
+## Play locally
 
 ```sh
 python3 -m http.server 8000
 ```
 
-Open <http://localhost:8000/> in a browser. You can also open `index.html` directly.
-
-## Play
-
-Choose a body color and size, then select **Start Simulation!**. Use **←/→** to move, **↑** or **W** to jump, **Space** to roar, **T** to choose a toy, and **M** to mute. On-screen buttons provide touch controls. Use **Change** to return to dinosaur creation and **Restart** to reset the simulation.
-
-## Project structure
-
-All markup, styles, canvas rendering, and game logic live in `index.html`; there are no external packages.
+Open <http://localhost:8000/> in your browser. You can also open `index.html` directly.
